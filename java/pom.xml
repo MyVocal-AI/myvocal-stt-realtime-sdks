@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ai.myvocal</groupId>
+  <artifactId>myvocal-stt-realtime</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>MyVocal STT Realtime SDK</name>
+  <description>MyVocal Speech to Text Realtime SDK for Java 8+ (server side): typed sessions, framing, rotation and REST close-out.</description>
+  <url>https://docs.myvocal.ai</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <organization>
+    <name>MyVocal</name>
+    <url>https://myvocal.ai</url>
+  </organization>
+  <developers>
+    <developer>
+      <id>myvocal-ai</id>
+      <name>MyVocal</name>
+      <url>https://github.com/MyVocal-AI</url>
+      <organization>MyVocal</organization>
+      <organizationUrl>https://myvocal.ai</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <url>https://github.com/MyVocal-AI/myvocal-stt-realtime-sdks</url>
+    <connection>scm:git:https://github.com/MyVocal-AI/myvocal-stt-realtime-sdks.git</connection>
+    <developerConnection>scm:git:https://github.com/MyVocal-AI/myvocal-stt-realtime-sdks.git</developerConnection>
+    <tag>v1.0.0</tag>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/MyVocal-AI/myvocal-stt-realtime-sdks/issues</url>
+  </issueManagement>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <okhttp.version>5.5.0</okhttp.version>
+    <junit.version>5.14.4</junit.version>
+    <project.build.outputTimestamp>2026-10-06T00:00:00Z</project.build.outputTimestamp>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp-jvm</artifactId>
+      <version>${okhttp.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!-- Java 8 bytecode and API: release=8 on JDK 9+; source/target 1.8 when built on JDK 8 -->
+    <profile>
+      <id>jdk9plus</id>
+      <activation><jdk>[9,)</jdk></activation>
+      <properties><maven.compiler.release>8</maven.compiler.release></properties>
+    </profile>
+    <profile>
+      <id>jdk8</id>
+      <activation><jdk>1.8</jdk></activation>
+      <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+        <configuration>
+          <compilerArgs><arg>-Xlint:all,-options,-processing</arg></compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>ai.myvocal.stt.realtime</Automatic-Module-Name>
+              <Implementation-Title>MyVocal STT Realtime SDK</Implementation-Title>
+              <Implementation-Version>${project.version}</Implementation-Version>
+              <Implementation-Vendor>MyVocal</Implementation-Vendor>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- Javadoc JAR (required by Maven Central); public API comments only, no doclint gate -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.12.0</version>
+        <configuration>
+          <doclint>none</doclint>
+          <quiet>true</quiet>
+          <show>public</show>
+          <windowtitle>MyVocal STT Realtime SDK ${project.version}</windowtitle>
+          <doctitle>MyVocal STT Realtime SDK ${project.version}</doctitle>
+          <bottom>Licensed under the Apache License, Version 2.0.</bottom>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals><goal>jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

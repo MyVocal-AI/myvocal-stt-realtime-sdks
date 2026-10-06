@@ -1,0 +1,69 @@
+# Manually triggered. Publishes the Java files already attached to a GitHub Release
+# (no rebuild) to Maven Central through the Central Portal Publisher API.
+# Needs repository/environment secrets set by the namespace owner:
+#   CENTRAL_TOKEN_USERNAME, CENTRAL_TOKEN_PASSWORD  (Central Portal user token)
+#   GPG_PRIVATE_KEY (ASCII-armoured secret key), GPG_PASSPHRASE (may be empty)
+name: Publish Java to Maven Central
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose assets are published
+        required: true
+        default: v1.0.0
+      publishing_type:
+        description: USER_MANAGED (confirm in the Portal) or AUTOMATIC
+        required: true
+        default: USER_MANAGED
+        type: choice
+        options: [USER_MANAGED, AUTOMATIC]
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: maven-central
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir assets \
+            --pattern 'myvocal-stt-realtime-*' --pattern SHA256SUMS
+          (cd assets && sha256sum --check --ignore-missing SHA256SUMS && rm SHA256SUMS)
+          ls -l assets
+      - name: Import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+      - name: Build signed bundle
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: python3 tools/release/central_bundle.py --in assets --out central-bundle.zip
+      - name: Upload and wait for validation
+        env:
+          TOKEN_USER: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          TOKEN_PASS: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          TAG: ${{ inputs.tag }}
+          PUBLISHING_TYPE: ${{ inputs.publishing_type }}
+        run: |
+          auth=$(printf '%s:%s' "$TOKEN_USER" "$TOKEN_PASS" | base64 -w0)
+          echo "::add-mask::$auth"
+          api=https://central.sonatype.com/api/v1/publisher
+          id=$(curl -sS --fail-with-body -H "Authorization: Bearer $auth" \
+            -F "bundle=@central-bundle.zip;type=application/octet-stream" \
+            "$api/upload?name=myvocal-stt-realtime-$TAG&publishingType=$PUBLISHING_TYPE")
+          echo "deployment id: $id"
+          for i in $(seq 1 90); do
+            status=$(curl -sS --fail-with-body -X POST -H "Authorization: Bearer $auth" "$api/status?id=$id")
+            state=$(printf '%s' "$status" | python3 -c 'import json,sys; print(json.load(sys.stdin)["deploymentState"])')
+            echo "state: $state"
+            case "$state" in
+              VALIDATED|PUBLISHING|PUBLISHED) echo "$status"; exit 0 ;;
+              FAILED) echo "$status"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "timed out waiting; query the deployment $id in the Portal before retrying"; exit 1

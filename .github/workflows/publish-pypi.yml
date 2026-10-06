@@ -1,0 +1,34 @@
+# Manually triggered. Publishes the Python wheel and sdist already attached to a GitHub
+# Release (no rebuild) to PyPI with Trusted Publishing (OIDC; no stored token).
+# PyPI side: add a (pending) trusted publisher for project myvocal-stt-realtime with
+# owner MyVocal-AI, repository myvocal-stt-realtime-sdks, workflow publish-pypi.yml,
+# environment pypi.
+name: Publish Python to PyPI
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose assets are published
+        required: true
+        default: v1.0.0
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
+            --pattern 'myvocal_stt_realtime-*' --pattern SHA256SUMS
+          (cd dist && sha256sum --check --ignore-missing SHA256SUMS && rm SHA256SUMS)
+          ls -l dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
